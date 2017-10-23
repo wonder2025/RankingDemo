@@ -14,16 +14,19 @@
         import org.apache.hadoop.util.Tool;
         import org.apache.hadoop.util.ToolRunner;
 
+
         import java.io.DataInput;
         import java.io.DataOutput;
         import java.io.IOException;
+        import java.util.Iterator;
+        import java.util.Map;
         import java.util.StringTokenizer;
 
 /**
  * Created  on 2017/8/3.
  */
 public class RankingDemo extends Configured implements Tool {
-
+//自定义writer接口
     protected static class IntPair implements WritableComparable<IntPair>{
         private int first = 0;
         private int second = 0;
@@ -40,11 +43,12 @@ public class RankingDemo extends Configured implements Tool {
         public int getSecond(){
             return second;
         }
-
+        //反序列化，从流中的二进制转换成IntPair
         public void readFields(DataInput in) throws IOException {
             first = in.readInt();
             second = in.readInt();
         }
+        //序列化，将IntPair转化成使用流传送的二进制
         public void write(DataOutput out) throws IOException {
             out.writeInt(first);
             out.writeInt(second);
@@ -62,7 +66,7 @@ public class RankingDemo extends Configured implements Tool {
                 return false;
             }
         }
-        //对key排序时，调用的就是这个compareTo方法
+        //对key排序时，调用的就是这个compareTo方法        //map做了个局部的排序
         public int compareTo(IntPair o) {
             if (first != o.first) {
                 return first - o.first;
@@ -131,12 +135,20 @@ public class RankingDemo extends Configured implements Tool {
     public int run(String[] args) throws Exception {
 
         Configuration conf = getConf();
-        conf.set("mapreduce.job.jar", "out/artifacts/RankingDemo_jar/RankingDemo.jar");
+        Iterator iter=conf.iterator();
+//        while (iter.hasNext()){
+//            Map.Entry<Object, Object> item = (Map.Entry)iter.next();
+//            System.out.println((String) item.getKey()+"   "+(String)item.getValue());
+//        }
+        conf.set("mapreduce.job.jar", "./target/RankingDemo-1.0-SNAPSHOT.jar");
         conf.set("mapreduce.app-submission.cross-platform", "true");
+        //直接把jar包放到平台上运行所需要的配置
         conf.set("fs.hdfs.impl","org.apache.hadoop.hdfs.DistributedFileSystem");
         conf.set("fs.file.impl", org.apache.hadoop.fs.LocalFileSystem.class.getName() );
-        Job job = Job.getInstance(conf,"secondary_sort");
+//        conf.set("hadoop.http.staticuser.user", "scdx03" );
 
+        Job job = Job.getInstance(conf,"secondary_sort");
+//linux和windows的区别
         job.setJarByClass(RankingDemo.class);
 //        Path job_output = new Path("/user/tony/secondarysort_out");
         Path job_output = new Path("/user/scdx03/secondarysort_out");
@@ -149,11 +161,13 @@ public class RankingDemo extends Configured implements Tool {
         job.setGroupingComparatorClass(GroupingComparator.class);
         job.setMapperClass(MapClass.class);
         job.setReducerClass(ReduceClass.class);
-        job.setNumReduceTasks(1);
+//        job.setNumReduceTasks(1);输入文件的格式
         job.setInputFormatClass(TextInputFormat.class);
+        //输出文件的格式
         job.setOutputFormatClass(TextOutputFormat.class);
 
         FileInputFormat.setInputPaths(job, job_input);
+        //
         job_output.getFileSystem(conf).delete(job_output, true);
         FileOutputFormat.setOutputPath(job, job_output);
 

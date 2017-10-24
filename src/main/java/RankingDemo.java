@@ -81,6 +81,14 @@ public class RankingDemo extends Configured implements Tool {
 
     /**
      * 在分组比较的时候，只比较原来的key，而不是组合key。
+     * 假设我的GroupingComparator只去比较Key的前3个字符，那么
+     baidu.A 1
+     baidu.A 1
+     baidu.B 1
+     baidu.B 1
+     就可以分到一个列表中，形成如下的输入
+     {baidu.A ：[1,1,1,1]}
+     并被一个Reducer一次性处理。
      */
     public static class GroupingComparator implements RawComparator<IntPair> {
 
@@ -162,6 +170,8 @@ public class RankingDemo extends Configured implements Tool {
         job.setMapperClass(MapClass.class);
         job.setReducerClass(ReduceClass.class);
 //        job.setNumReduceTasks(1);输入文件的格式
+        //TextInputFormat继承于FileInputFormat，FileInputFormat是按行切分的，每行作为一个Mapper 的输入
+        //所以TextInputFormat是按行切分的
         job.setInputFormatClass(TextInputFormat.class);
         //输出文件的格式
         job.setOutputFormatClass(TextOutputFormat.class);

@@ -170,7 +170,7 @@ public class RankingDemo extends Configured implements Tool {
         //
         job_output.getFileSystem(conf).delete(job_output, true);
         FileOutputFormat.setOutputPath(job, job_output);
-
+        //方法启动作业并检查进展情况
         job.waitForCompletion(true);
         return 0;
     }

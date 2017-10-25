@@ -1,26 +1,28 @@
 
 
-        import org.apache.hadoop.conf.Configuration;
-        import org.apache.hadoop.conf.Configured;
-        import org.apache.hadoop.fs.Path;
-        import org.apache.hadoop.io.*;
-        import org.apache.hadoop.mapreduce.Job;
-        import org.apache.hadoop.mapreduce.Mapper;
-        import org.apache.hadoop.mapreduce.Reducer;
-        import org.apache.hadoop.mapreduce.lib.input.FileInputFormat;
-        import org.apache.hadoop.mapreduce.lib.input.TextInputFormat;
-        import org.apache.hadoop.mapreduce.lib.output.FileOutputFormat;
-        import org.apache.hadoop.mapreduce.lib.output.TextOutputFormat;
-        import org.apache.hadoop.util.Tool;
-        import org.apache.hadoop.util.ToolRunner;
+import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.conf.Configured;
+import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.io.*;
+import org.apache.hadoop.mapreduce.Job;
+import org.apache.hadoop.mapreduce.Mapper;
+import org.apache.hadoop.mapreduce.Reducer;
+import org.apache.hadoop.mapreduce.lib.input.FileInputFormat;
+import org.apache.hadoop.mapreduce.lib.input.TextInputFormat;
+import org.apache.hadoop.mapreduce.lib.output.FileOutputFormat;
+import org.apache.hadoop.mapreduce.lib.output.TextOutputFormat;
+import org.apache.hadoop.mrunit.mapreduce.MapDriver;
+import org.apache.hadoop.util.Tool;
+import org.apache.hadoop.util.ToolRunner;
+import org.junit.Before;
+import org.junit.Test;
 
 
-        import java.io.DataInput;
-        import java.io.DataOutput;
-        import java.io.IOException;
-        import java.util.Iterator;
-        import java.util.Map;
-        import java.util.StringTokenizer;
+import java.io.DataInput;
+import java.io.DataOutput;
+import java.io.IOException;
+import java.util.Iterator;
+import java.util.StringTokenizer;
 
 /**
  * Created  on 2017/8/3.
@@ -79,27 +81,11 @@ public class RankingDemo extends Configured implements Tool {
 
     }
 
-    /**
-     * 在分组比较的时候，只比较原来的key，而不是组合key。
-     */
-    public static class GroupingComparator implements RawComparator<IntPair> {
-
-        public int compare(byte[] b1, int s1, int l1, byte[] b2, int s2, int l2) {
-            return WritableComparator.compareBytes(b1, s1, Integer.SIZE/8, b2, s2, Integer.SIZE/8);
-        }
-
-        public int compare(IntPair o1, IntPair o2) {
-            int first1 = o1.getFirst();
-            int first2 = o2.getFirst();
-            return first1 - first2;
-        }
-    }
 
     public static class MapClass extends Mapper<LongWritable, Text, IntPair, IntWritable> {
 
         private final IntPair key = new IntPair();
         private final IntWritable value = new IntWritable();
-
         @Override
         public void map(LongWritable inKey, Text inValue,Context context) throws IOException, InterruptedException {
             StringTokenizer itr = new StringTokenizer(inValue.toString());
@@ -114,6 +100,21 @@ public class RankingDemo extends Configured implements Tool {
                 value.set(right);
                 context.write(key, value);
             }
+        }
+    }
+    /**
+     * 在分组比较的时候，只比较原来的key，而不是组合key。 reduce前分组，shuffle就是group
+     */
+    public static class GroupingComparator implements RawComparator<IntPair> {
+
+        public int compare(byte[] b1, int s1, int l1, byte[] b2, int s2, int l2) {
+            return WritableComparator.compareBytes(b1, s1, Integer.SIZE/8, b2, s2, Integer.SIZE/8);
+        }
+
+        public int compare(IntPair o1, IntPair o2) {//分组比较,组间排序
+            int first1 = o1.getFirst();
+            int first2 = o2.getFirst();
+            return first1 - first2;
         }
     }
 
@@ -158,10 +159,12 @@ public class RankingDemo extends Configured implements Tool {
         job.setMapOutputValueClass(IntWritable.class);
         job.setOutputKeyClass(Text.class);
         job.setOutputValueClass(IntWritable.class);
-        job.setGroupingComparatorClass(GroupingComparator.class);
         job.setMapperClass(MapClass.class);
+        //重写了shuffle阶段分组的方式 key->[v1,v2]
+        job.setGroupingComparatorClass(GroupingComparator.class);
         job.setReducerClass(ReduceClass.class);
-//        job.setNumReduceTasks(1);输入文件的格式
+        job.setNumReduceTasks(1);
+//        输入文件的格式
         job.setInputFormatClass(TextInputFormat.class);
         //输出文件的格式
         job.setOutputFormatClass(TextOutputFormat.class);
@@ -175,8 +178,33 @@ public class RankingDemo extends Configured implements Tool {
         return 0;
     }
 
-    public static void main(String[] args) throws Exception{
-        System.setProperty("hadoop.home.dir", "E:\\hadoop");
-        ToolRunner.run(new RankingDemo(),args);
-    }
+//    public static void main(String[] args) throws Exception{
+//        System.setProperty("hadoop.home.dir", "E:\\hadoop");
+//        ToolRunner.run(new RankingDemo(),args);
+//    }
+
+//    public class MapTest{
+//        private Mapper Map;
+//        private MapDriver driver;
+//        @Before
+//        public void init(){
+//            Map=new MapClass();
+//            driver=new MapDriver(Map);
+//        }
+//        @SuppressWarnings("unchecked")
+//        @Test
+//        public void testMap()throws Exception{
+//            String text="hello world goodbye world hello hadoop goodbye hadoop";
+//            driver.withInput(new LongWritable(), new Text(text))
+//                    .withOutput(new Text("hello"),new IntWritable(1))
+//                    .withOutput(new Text("world"),new IntWritable(1))
+//                    .withOutput(new Text("goodbye"),new IntWritable(1))
+//                    .withOutput(new Text("world"),new IntWritable(1))
+//                    .withOutput(new Text("hello"),new IntWritable(1))
+//                    .withOutput(new Text("hadoop"),new IntWritable(1))
+//                    .withOutput(new Text("goodbye"),new IntWritable(1))
+//                    .withOutput(new Text("hadoop"),new IntWritable(2)).runTest();
+//        }
+//
+//    }
 }

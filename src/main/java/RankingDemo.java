@@ -11,24 +11,22 @@ import org.apache.hadoop.mapreduce.lib.input.FileInputFormat;
 import org.apache.hadoop.mapreduce.lib.input.TextInputFormat;
 import org.apache.hadoop.mapreduce.lib.output.FileOutputFormat;
 import org.apache.hadoop.mapreduce.lib.output.TextOutputFormat;
-import org.apache.hadoop.mrunit.mapreduce.MapDriver;
 import org.apache.hadoop.util.Tool;
 import org.apache.hadoop.util.ToolRunner;
-import org.junit.Before;
-import org.junit.Test;
 
 
 import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
 import java.util.Iterator;
+import java.util.Map;
 import java.util.StringTokenizer;
 
 /**
  * Created  on 2017/8/3.
  */
 public class RankingDemo extends Configured implements Tool {
-//自定义writer接口
+    //自定义writer接口
     protected static class IntPair implements WritableComparable<IntPair>{
         private int first = 0;
         private int second = 0;
@@ -81,11 +79,35 @@ public class RankingDemo extends Configured implements Tool {
 
     }
 
+    /**
+     * 在分组比较的时候，只比较原来的key，而不是组合key。
+     * 假设我的GroupingComparator只去比较Key的前3个字符，那么
+     baidu.A 1
+     baidu.A 1
+     baidu.B 1
+     baidu.B 1
+     就可以分到一个列表中，形成如下的输入
+     {baidu.A ：[1,1,1,1]}
+     并被一个Reducer一次性处理。
+     */
+    public static class GroupingComparator implements RawComparator<IntPair> {
+
+        public int compare(byte[] b1, int s1, int l1, byte[] b2, int s2, int l2) {
+            return WritableComparator.compareBytes(b1, s1, Integer.SIZE/8, b2, s2, Integer.SIZE/8);
+        }
+
+        public int compare(IntPair o1, IntPair o2) {
+            int first1 = o1.getFirst();
+            int first2 = o2.getFirst();
+            return first1 - first2;
+        }
+    }
 
     public static class MapClass extends Mapper<LongWritable, Text, IntPair, IntWritable> {
 
         private final IntPair key = new IntPair();
         private final IntWritable value = new IntWritable();
+
         @Override
         public void map(LongWritable inKey, Text inValue,Context context) throws IOException, InterruptedException {
             StringTokenizer itr = new StringTokenizer(inValue.toString());
@@ -100,21 +122,6 @@ public class RankingDemo extends Configured implements Tool {
                 value.set(right);
                 context.write(key, value);
             }
-        }
-    }
-    /**
-     * 在分组比较的时候，只比较原来的key，而不是组合key。 reduce前分组，shuffle就是group
-     */
-    public static class GroupingComparator implements RawComparator<IntPair> {
-
-        public int compare(byte[] b1, int s1, int l1, byte[] b2, int s2, int l2) {
-            return WritableComparator.compareBytes(b1, s1, Integer.SIZE/8, b2, s2, Integer.SIZE/8);
-        }
-
-        public int compare(IntPair o1, IntPair o2) {//分组比较,组间排序
-            int first1 = o1.getFirst();
-            int first2 = o2.getFirst();
-            return first1 - first2;
         }
     }
 
@@ -159,12 +166,12 @@ public class RankingDemo extends Configured implements Tool {
         job.setMapOutputValueClass(IntWritable.class);
         job.setOutputKeyClass(Text.class);
         job.setOutputValueClass(IntWritable.class);
-        job.setMapperClass(MapClass.class);
-        //重写了shuffle阶段分组的方式 key->[v1,v2]
         job.setGroupingComparatorClass(GroupingComparator.class);
+        job.setMapperClass(MapClass.class);
         job.setReducerClass(ReduceClass.class);
-        job.setNumReduceTasks(1);
-//        输入文件的格式
+//        job.setNumReduceTasks(1);输入文件的格式
+        //TextInputFormat继承于FileInputFormat，FileInputFormat是按行切分的，每行作为一个Mapper 的输入
+        //所以TextInputFormat是按行切分的
         job.setInputFormatClass(TextInputFormat.class);
         //输出文件的格式
         job.setOutputFormatClass(TextOutputFormat.class);
@@ -183,7 +190,7 @@ public class RankingDemo extends Configured implements Tool {
 //        ToolRunner.run(new RankingDemo(),args);
 //    }
 
-//    public class MapTest{
+    //    public class MapTest{
 //        private Mapper Map;
 //        private MapDriver driver;
 //        @Before
@@ -207,4 +214,8 @@ public class RankingDemo extends Configured implements Tool {
 //        }
 //
 //    }
+    public static void main(String[] args) throws Exception{
+        System.setProperty("hadoop.home.dir", "E:\\hadoop");
+        ToolRunner.run(new RankingDemo(),args);
+    }
 }

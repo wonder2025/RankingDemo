@@ -22,8 +22,14 @@
         import java.util.Map;
         import java.util.StringTokenizer;
 
-/**
- * Created  on 2017/8/3.
+/**二次排序：
+ 1.定义了一个IntPair类，该类作为key存在，实现了WritableComparable接口，并且重写Comparable类的了compareTo方法。
+ 2.mapper：MapClass类重写了map方法，读入一行数据，将该行数据第一列与第二列数组装成一个key即IntPair实例，第二列数据作为value进行输出
+ 3.Patitioner：随后经过的Patitioner把每条kv对标记为属于的某个Reducer，这样Reducer就可以拉取Mapper得到的结果,但是本例中reducer设置为1，这样每个kv对均进入到一个reducer中。Patitioner时key值会根据Intpair中重写的compareTo方法进行排序，即第一列和第二列排序。只有一个reducer则可以实现全局有序
+ 4.shuffle阶段，Reduce Task从各个MapTask上远程拷贝一次数据，并针对某一片数据，如果其大小超过一定阈值，则写到磁盘上，否则直接放到内存中。
+ 5.groupping阶段：GroupingComparator实现RawComparator也是对key进行的比较，key中的第一个数相同则聚集成一组。
+ 6.reducer阶段：reduce打印出key的第一个数，和已排好序的第二列数
+ *
  */
 public class RankingDemo extends Configured implements Tool {
 //自定义writer接口
@@ -133,6 +139,7 @@ public class RankingDemo extends Configured implements Tool {
         public void reduce(IntPair key, Iterable<IntWritable> values, Context context) throws IOException, InterruptedException {
             context.write(SEPARATOR, null);
             first.set(Integer.toString(key.getFirst()));
+//            first.set(Integer.toString(key.getSecond()));?第二列有可能不同
             for(IntWritable value: values) {
                 context.write(first, value);
             }
@@ -169,7 +176,8 @@ public class RankingDemo extends Configured implements Tool {
         job.setGroupingComparatorClass(GroupingComparator.class);
         job.setMapperClass(MapClass.class);
         job.setReducerClass(ReduceClass.class);
-//        job.setNumReduceTasks(1);输入文件的格式
+//        job.setNumReduceTasks(1);
+        // 输入文件的格式
         //TextInputFormat继承于FileInputFormat，FileInputFormat是按行切分的，每行作为一个Mapper 的输入
         //所以TextInputFormat是按行切分的
         job.setInputFormatClass(TextInputFormat.class);

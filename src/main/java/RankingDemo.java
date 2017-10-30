@@ -1,26 +1,26 @@
 
 
-        import org.apache.hadoop.conf.Configuration;
-        import org.apache.hadoop.conf.Configured;
-        import org.apache.hadoop.fs.Path;
-        import org.apache.hadoop.io.*;
-        import org.apache.hadoop.mapreduce.Job;
-        import org.apache.hadoop.mapreduce.Mapper;
-        import org.apache.hadoop.mapreduce.Reducer;
-        import org.apache.hadoop.mapreduce.lib.input.FileInputFormat;
-        import org.apache.hadoop.mapreduce.lib.input.TextInputFormat;
-        import org.apache.hadoop.mapreduce.lib.output.FileOutputFormat;
-        import org.apache.hadoop.mapreduce.lib.output.TextOutputFormat;
-        import org.apache.hadoop.util.Tool;
-        import org.apache.hadoop.util.ToolRunner;
+import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.conf.Configured;
+import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.io.*;
+import org.apache.hadoop.mapreduce.Job;
+import org.apache.hadoop.mapreduce.Mapper;
+import org.apache.hadoop.mapreduce.Reducer;
+import org.apache.hadoop.mapreduce.lib.input.FileInputFormat;
+import org.apache.hadoop.mapreduce.lib.input.TextInputFormat;
+import org.apache.hadoop.mapreduce.lib.output.FileOutputFormat;
+import org.apache.hadoop.mapreduce.lib.output.TextOutputFormat;
+import org.apache.hadoop.util.Tool;
+import org.apache.hadoop.util.ToolRunner;
 
 
-        import java.io.DataInput;
-        import java.io.DataOutput;
-        import java.io.IOException;
-        import java.util.Iterator;
-        import java.util.Map;
-        import java.util.StringTokenizer;
+import java.io.DataInput;
+import java.io.DataOutput;
+import java.io.IOException;
+import java.util.Iterator;
+import java.util.Map;
+import java.util.StringTokenizer;
 
 /**二次排序：
  1.定义了一个IntPair类，该类作为key存在，实现了WritableComparable接口，并且重写Comparable类的了compareTo方法。
@@ -32,7 +32,7 @@
  *
  */
 public class RankingDemo extends Configured implements Tool {
-//自定义writer接口
+    //自定义writer接口
     protected static class IntPair implements WritableComparable<IntPair>{
         private int first = 0;
         private int second = 0;
@@ -193,6 +193,35 @@ public class RankingDemo extends Configured implements Tool {
         return 0;
     }
 
+//    public static void main(String[] args) throws Exception{
+//        System.setProperty("hadoop.home.dir", "E:\\hadoop");
+//        ToolRunner.run(new RankingDemo(),args);
+//    }
+
+    //    public class MapTest{
+//        private Mapper Map;
+//        private MapDriver driver;
+//        @Before
+//        public void init(){
+//            Map=new MapClass();
+//            driver=new MapDriver(Map);
+//        }
+//        @SuppressWarnings("unchecked")
+//        @Test
+//        public void testMap()throws Exception{
+//            String text="hello world goodbye world hello hadoop goodbye hadoop";
+//            driver.withInput(new LongWritable(), new Text(text))
+//                    .withOutput(new Text("hello"),new IntWritable(1))
+//                    .withOutput(new Text("world"),new IntWritable(1))
+//                    .withOutput(new Text("goodbye"),new IntWritable(1))
+//                    .withOutput(new Text("world"),new IntWritable(1))
+//                    .withOutput(new Text("hello"),new IntWritable(1))
+//                    .withOutput(new Text("hadoop"),new IntWritable(1))
+//                    .withOutput(new Text("goodbye"),new IntWritable(1))
+//                    .withOutput(new Text("hadoop"),new IntWritable(2)).runTest();
+//        }
+//
+//    }
     public static void main(String[] args) throws Exception{
         System.setProperty("hadoop.home.dir", "E:\\hadoop");
         ToolRunner.run(new RankingDemo(),args);

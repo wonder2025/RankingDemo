@@ -22,7 +22,9 @@ import java.util.Iterator;
 import java.util.Map;
 import java.util.StringTokenizer;
 
-/**二次排序：
+/**
+ *
+ /**二次排序：
  1.定义了一个IntPair类，该类作为key存在，实现了WritableComparable接口，并且重写Comparable类的了compareTo方法。
  2.mapper：MapClass类重写了map方法，读入一行数据，将该行数据第一列与第二列数组装成一个key即IntPair实例，第二列数据作为value进行输出
  3.Patitioner：随后经过的Patitioner把每条kv对标记为属于的某个Reducer，这样Reducer就可以拉取Mapper得到的结果,但是本例中reducer设置为1，这样每个kv对均进入到一个reducer中。Patitioner时key值会根据Intpair中重写的compareTo方法进行排序，即第一列和第二列排序。只有一个reducer则可以实现全局有序
@@ -31,6 +33,7 @@ import java.util.StringTokenizer;
  6.reducer阶段：reduce打印出key的第一个数，和已排好序的第二列数
  *
  */
+
 public class RankingDemo extends Configured implements Tool {
     //自定义writer接口
     protected static class IntPair implements WritableComparable<IntPair>{
@@ -130,7 +133,19 @@ public class RankingDemo extends Configured implements Tool {
             }
         }
     }
-
+    //输入
+//        14 62v
+//        24 74v
+//        33 41v
+//        41 45
+//        52 78
+//        62 90
+//        74 54
+//        21 65
+//        45 78v
+//        45 48v
+//        14 25v
+//        34 98
     public static class ReduceClass extends Reducer<IntPair, IntWritable, Text, IntWritable> {
         private static final Text SEPARATOR = new Text("------------------------------------------------");
         private final Text first = new Text();
@@ -138,8 +153,108 @@ public class RankingDemo extends Configured implements Tool {
         @Override
         public void reduce(IntPair key, Iterable<IntWritable> values, Context context) throws IOException, InterruptedException {
             context.write(SEPARATOR, null);
-            first.set(Integer.toString(key.getFirst()));
-//            first.set(Integer.toString(key.getSecond()));?第二列有可能不同
+//            first.set(Integer.toString(key.getFirst()));
+            //输出reduce没有设置成1
+//            ------------------------------------------------
+//                    14      25
+//                    ------------------------------------------------
+//            33      41
+//                    ------------------------------------------------
+//            14      62
+//                    ------------------------------------------------
+//            21      65
+//                    ------------------------------------------------
+//            41      45
+//                    ------------------------------------------------
+//            45      48
+//                    ------------------------------------------------
+//            24      74
+//                    ------------------------------------------------
+//            45      78
+//                    ------------------------------------------------
+//            74      54
+//                    ------------------------------------------------
+//            52      78
+//                    ------------------------------------------------
+//            34      98
+//                    ------------------------------------------------
+//            62      90
+            //reduce设置成1
+//            ------------------------------------------------
+//            14      25
+//            14      62
+//                    ------------------------------------------------
+//            21      65
+//                    ------------------------------------------------
+//            24      74
+//                    ------------------------------------------------
+//            33      41
+//                    ------------------------------------------------
+//            34      98
+//                    ------------------------------------------------
+//            41      45
+//                    ------------------------------------------------
+//            45      48
+//            45      78
+//                    ------------------------------------------------
+//            52      78
+//                    ------------------------------------------------
+//            62      90
+//                    ------------------------------------------------
+//            74      54
+
+
+            first.set(Integer.toString(key.getSecond()));
+            //输出reduce没有设置成1
+
+//------------------------------------------------
+//25      25
+//------------------------------------------------
+//41      41
+//------------------------------------------------
+//62      62
+//------------------------------------------------
+//65      65
+//------------------------------------------------
+//45      45
+//------------------------------------------------
+//48      48
+//------------------------------------------------
+//74      74
+//------------------------------------------------
+//78      78
+//------------------------------------------------
+//54      54
+//------------------------------------------------
+//78      78
+//------------------------------------------------
+//98      98
+//------------------------------------------------
+//90      90
+            //reduce设置成1//second不同的仍然聚合到了一组
+//            ------------------------------------------------
+//            25      25
+//            25      62
+//                    ------------------------------------------------
+//            65      65
+//                    ------------------------------------------------
+//            74      74
+//                    ------------------------------------------------
+//            41      41
+//                    ------------------------------------------------
+//            98      98
+//                    ------------------------------------------------
+//            45      45
+//                    ------------------------------------------------
+//            48      48
+//            48      78
+//                    ------------------------------------------------
+//            78      78
+//                    ------------------------------------------------
+//            90      90
+//                    ------------------------------------------------
+//            54      54
+            context.setStatus("something happen!");
             for(IntWritable value: values) {
                 context.write(first, value);
             }
@@ -176,8 +291,8 @@ public class RankingDemo extends Configured implements Tool {
         job.setGroupingComparatorClass(GroupingComparator.class);
         job.setMapperClass(MapClass.class);
         job.setReducerClass(ReduceClass.class);
-//        job.setNumReduceTasks(1);
-        // 输入文件的格式
+        job.setNumReduceTasks(1);
+//        输入文件的格式
         //TextInputFormat继承于FileInputFormat，FileInputFormat是按行切分的，每行作为一个Mapper 的输入
         //所以TextInputFormat是按行切分的
         job.setInputFormatClass(TextInputFormat.class);
@@ -193,12 +308,12 @@ public class RankingDemo extends Configured implements Tool {
         return 0;
     }
 
-//    public static void main(String[] args) throws Exception{
-//        System.setProperty("hadoop.home.dir", "E:\\hadoop");
-//        ToolRunner.run(new RankingDemo(),args);
-//    }
+    public static void main(String[] args) throws Exception{
+        System.setProperty("hadoop.home.dir", "E:\\hadoop");
+        ToolRunner.run(new RankingDemo(),args);
+    }
 
-    //    public class MapTest{
+//    public class MapTest{
 //        private Mapper Map;
 //        private MapDriver driver;
 //        @Before
@@ -222,8 +337,8 @@ public class RankingDemo extends Configured implements Tool {
 //        }
 //
 //    }
-    public static void main(String[] args) throws Exception{
+    /*public static void main(String[] args) throws Exception{
         System.setProperty("hadoop.home.dir", "E:\\hadoop");
         ToolRunner.run(new RankingDemo(),args);
-    }
+    }*/
 }
